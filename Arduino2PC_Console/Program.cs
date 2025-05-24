@@ -9,20 +9,63 @@ namespace Arduino2PC_Console_3
 {
     class Program
     {
+
         private static SerialPort serialPort;
         static object serialLock = new object();
+
+
         static void Main(string[] args)
         {
+            Console.Write("연결할 시리얼 포트(COM 번호) 입력 (예: COM11): ");
+            string portName = Console.ReadLine()?.Trim();
+
+            if (string.IsNullOrEmpty(portName))
+            {
+                Console.WriteLine("포트명이 유효하지 않습니다. 프로그램을 종료합니다.");
+                return;
+            }
+
+            // 2. TCP 포트 입력 받기
+            Console.Write("사용할 TCP 포트 입력 (예: 8080): ");
+            string tcpPortStr = Console.ReadLine()?.Trim();
+            if (!int.TryParse(tcpPortStr, out int tcpPort) || tcpPort < 1 || tcpPort > 65535)
+            {
+                Console.WriteLine("TCP 포트 번호가 유효하지 않습니다. 프로그램을 종료합니다.");
+                return;
+            }
+
             //시리얼 포트 설정 코드
             serialPort = new SerialPort();
             serialPort.ReadTimeout = 2000;
-            serialPort.PortName = "COM11";// 아두이노 인식 COM PORT (자신에 맞게 조정)
+            serialPort.PortName = portName;// 아두이노 인식 COM PORT (자신에 맞게 조정)
             serialPort.BaudRate = 115200;
             serialPort.DtrEnable = false; // false => true
             serialPort.NewLine = "\r\n"; // CRLF
-            serialPort.Open();
-            Console.WriteLine("시리얼 포트 연결됨.");
 
+            try
+            {
+                serialPort.Open();
+                Console.WriteLine($"시리얼 포트 {portName} 연결됨.");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[에러] 시리얼 포트를 열 수 없습니다: {ex.Message}");
+                return;
+            }
+
+            // 4. TCP 서버 시작
+            TcpListener server = new TcpListener(IPAddress.Any, tcpPort);
+            server.Start();
+            Console.WriteLine($"[TCP 서버] 포트 {tcpPort}에서 서버 시작됨.");
+
+            while (true)
+            {
+                TcpClient client = server.AcceptTcpClient();
+                Console.WriteLine("클라이언트 연결됨");
+
+                // 각각의 클라이언트를 스레드에서 처리
+                ThreadPool.QueueUserWorkItem(_ => HandleClient(client));
+            }
 
             //// 시리얼 포트 점검 코드
             //while (true)
@@ -46,20 +89,6 @@ namespace Arduino2PC_Console_3
             //        Console.WriteLine("[에러] 아두이노 응답 없음 (타임아웃)");
             //    }
             //}
-
-            //TCP 서버 코드
-            TcpListener server = new TcpListener(IPAddress.Any, 8080);
-            server.Start();
-            Console.WriteLine("TCP 서버 시작됨 (포트 8080)");
-
-            while (true)
-            {
-                TcpClient client = server.AcceptTcpClient();
-                Console.WriteLine("클라이언트 연결됨");
-
-                // 각각의 클라이언트를 스레드에서 처리
-                ThreadPool.QueueUserWorkItem(_ => HandleClient(client));
-            }
         }
 
         static void HandleClient(TcpClient client)

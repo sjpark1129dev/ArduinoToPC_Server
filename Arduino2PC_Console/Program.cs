@@ -66,29 +66,6 @@ namespace Arduino2PC_Console_3
                 // 각각의 클라이언트를 스레드에서 처리
                 ThreadPool.QueueUserWorkItem(_ => HandleClient(client));
             }
-
-            //// 시리얼 포트 점검 코드
-            //while (true)
-            //{
-            //    Console.Write("\n입력 > ");
-            //    string input = Console.ReadLine()?.Trim();
-
-            //    if (string.IsNullOrEmpty(input)) continue;
-            //    if (input.Equals("exit", StringComparison.OrdinalIgnoreCase)) break;
-
-            //    serialPort.DiscardInBuffer();
-            //    serialPort.WriteLine(input); // 아두이노에 명령 전송
-
-            //    try
-            //    {
-            //        string response = serialPort.ReadLine(); // 응답 수신
-            //        Console.WriteLine("[아두이노 응답] " + response);
-            //    }
-            //    catch (TimeoutException)
-            //    {
-            //        Console.WriteLine("[에러] 아두이노 응답 없음 (타임아웃)");
-            //    }
-            //}
         }
 
         static void HandleClient(TcpClient client)
